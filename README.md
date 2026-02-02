@@ -27,6 +27,6 @@ Este repositório contém os artefatos de software e experimentos desenvolvidos 
 ## 🤝 Contato
 * **Pesquisador:** João Ricardo Lopes da Silva
 * **Email:** jrls1@poli.br
-* 
+
 * **Orientador:** Prof. Dr. Emmanuel Andrade
 * **Email:** emmanuel.andrade@poli.br
