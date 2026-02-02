@@ -5,7 +5,7 @@
 ## 📌 Sobre o Projeto
 Este repositório contém os artefatos de software e experimentos desenvolvidos durante o projeto de Iniciação Científica (PIBIC) vinculado à Universidade de Pernambuco (UPE).
 
-[cite_start]**Objetivo:** Investigar e implementar técnicas de Inteligência Artificial Explicável (XAI) para promover transparência, confiança e segurança em sistemas industriais, alinhados aos princípios da Indústria 5.0[cite: 1192, 1193].
+## **Objetivo:** Investigar e implementar técnicas de Inteligência Artificial Explicável (XAI) para promover transparência, confiança e segurança em sistemas industriais, alinhados aos princípios da Indústria 5.0[cite: 1192, 1193].
 
 ## 🎯 Objetivos Específicos
 * Avaliar o impacto de técnicas de XAI (LIME, SHAP, etc.) na confiabilidade de processos.
