@@ -1,0 +1,21 @@
+
+RELATÓRIO DE AUDITORIA TÉCNICA - INDÚSTRIA 5.0
+==============================================
+Data de Geração: 02/02/2026
+Modelo Auditado: Random Forest Classifier
+
+1. PERFORMANCE DO MODELO
+------------------------
+Acurácia Global: 98.17% 
+(Probabilidade geral de acerto do modelo)
+
+F1-Score:        0.6784
+(Capacidade de balancear falsos positivos e negativos)
+
+2. CONFORMIDADE XAI
+-------------------
+Ferramenta utilizada: Shapash (SHAP backend)
+Método de explicação: TreeExplainer
+Interpretabilidade: Global (Feature Importance) e Local (Caso a Caso)
+
+Este documento atesta a transparência algorítmica do sistema.
