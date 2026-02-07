@@ -1,0 +1,14 @@
+
+RELATÓRIO DE AUDITORIA - SISTEMAS HIDRÁULICOS (UCI)
+===================================================
+Data: 07/02/2026
+Dataset: Condition Monitoring of Hydraulic Systems (Real)
+Modelo: Random Forest Classifier
+
+METRICAS DE VALIDAÇÃO:
+----------------------
+Acurácia Global: 0.9864
+F1-Score (Classe Instável): 0.9798
+
+OBSERVAÇÕES:
+Dados reais de sensores físicos agregados por ciclo de trabalho (60s).
