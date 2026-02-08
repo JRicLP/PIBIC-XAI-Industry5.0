@@ -15,8 +15,8 @@ Este repositório contém os artefatos de software e experimentos desenvolvidos 
 ## 🛠️ Tecnologias Utilizadas
 * **Linguagem:** Python 3.9+
 * **XAI:** Shapash, SHAP, LIME
-* **Modelagem:** Scikit-learn, XGBoost
-* **Dados:** Datasets públicos industriais (ex: AI4I 2020 Predictive Maintenance)
+* **Modelagem:** Scikit-learn, XGBoost, Random Forest
+* **Dados:** Datasets públicos industriais (AI4I 2020 Predictive Maintenance, UCI Hydraulic Systems)
 
 ## 📂 Estrutura do Repositório
 * `/data`: Datasets utilizados (ou scripts para download).
