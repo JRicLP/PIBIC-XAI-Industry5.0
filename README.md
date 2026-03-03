@@ -5,6 +5,8 @@
 ## 📌 Sobre o Projeto
 Este repositório contém os artefatos de software e experimentos desenvolvidos durante o projeto de Iniciação Científica (PIBIC) vinculado à Universidade de Pernambuco (UPE).
 
+**Tema:** Modelos Explicáveis para Processos Industriais: Avanços e Aplicações em IA na Indústria 5.0
+
 **Objetivo:** Investigar e implementar técnicas de Inteligência Artificial Explicável (XAI) para promover transparência, confiança e segurança em sistemas industriais, alinhados aos princípios da Indústria 5.0.
 
 ## 🎯 Objetivos Específicos
