@@ -16,7 +16,7 @@ MLRUNS_DIR = BASE_DIR / "mlruns"
 
 # 2. Configuracoes do Dataset (Nasa C-Maps)
 
-DATASET_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/00273/CMAPSSData.zip"
+DATASET_URL = "https://phm-datasets.s3.amazonaws.com/NASA/6.+Turbofan+Engine+Degradation+Simulation+Data+Set.zip"
 TRAIN_FILE = "train_FD001.txt"
 TEST_FILE = "test_FD001.txt"
 RUL_FILE = "RUL_FD001.txt"
