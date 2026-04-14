@@ -12,7 +12,7 @@ def evaluate_model(model, X_test, y_test, run_id):
     Calcula as métricas de regressão, gera gráficos de validação
     e regista os resultados e artefactos no MLflow.
     """
-    print(f"-> A iniciar a avaliação estatística (Run ID: {run_id})...")
+    print(f"Início da avaliação estatística (Run ID: {run_id})...")
     
     # 1. Geração das Previsões
     y_pred = model.predict(X_test)
@@ -38,7 +38,7 @@ def evaluate_model(model, X_test, y_test, run_id):
         plots_dir = config.BASE_DIR / "docs" / "plots"
         plots_dir.mkdir(parents=True, exist_ok=True)
         
-        # --- Gráfico 1: Real vs Previsto ---
+        #Gráfico 1: Real vs Previsto
         plt.figure(figsize=(10, 6))
         plt.scatter(y_test, y_pred, alpha=0.5, color='#1f77b4') # Azul padrão
         plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
@@ -50,7 +50,7 @@ def evaluate_model(model, X_test, y_test, run_id):
         plt.savefig(scatter_path, dpi=300, bbox_inches='tight')
         plt.close()
         
-        # --- Gráfico 2: Distribuição dos Resíduos (Erros) ---
+        #Gráfico 2: Distribuição dos Resíduos (Erros)
         residuos = y_test - y_pred
         plt.figure(figsize=(10, 6))
         sns.histplot(residuos, bins=50, kde=True, color='#9467bd') # Roxo
