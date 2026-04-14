@@ -39,8 +39,8 @@ def main():
     # 4. Explicabilidade (XAI) e Assistente LLM:
     
     print("\n4. XAI e Tradução para o Operador")
-    generate_explanations(model, X_test)
-    generate_operator_report(...)
+    id_critico, rul, sensor_1, sensor_2 = generate_explanations(model, X_test, run_id)
+    generate_operator_report(id_critico, rul, sensor_1, sensor_2)
 
     print("Finalizado!")
 
