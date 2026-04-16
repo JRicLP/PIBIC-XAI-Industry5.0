@@ -1,4 +1,4 @@
-=== Relatório de Performance (NASA C-MAPSS) ===
+Relatório de Performance (NASA C-MAPSS)
 Modelo: Random Forest Regressor
 MAE (Erro Medio Absoluto): 29.6888
 RMSE: 41.5214
