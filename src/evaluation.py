@@ -1,21 +1,44 @@
-import numpy as np
+""" 
+Este módulo é responsável por avaliar o modelo de previsão de RUL utilizando o 
+dataset da NASA C-Maps. Ele segue as seguintes etapas:
+
+1. Geração das previsões do modelo para o conjunto de teste.
+2. Cálculo das métricas de regressão: MAE, RMSE e R².
+3. Registo das métricas no MLflow para rastreamento e comparação entre experimentos.
+4. Geração de gráficos de validação: Real vs Previsto e Distribuição dos Resíduos.
+5. Exportação dos gráficos em alta resolução para análise visual e registro
+como artefatos no MLflow.
+6. Retorno das métricas calculadas para possíveis usos futuros
+(ex: relatórios, dashboards ou análises adicionais).
+"""
+
 import matplotlib.pyplot as plt
+import mlflow
+import numpy as np
 import seaborn as sns
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-import mlflow
 
-# Importa as configurações globais
-import src.config as config
+from src import config
 
-def evaluate_model(model, X_test, y_test, run_id):
+def evaluate_model(model, x_test, y_test, run_id):
     """
     Calcula as métricas de regressão, gera gráficos de validação
     e regista os resultados e artefactos no MLflow.
+
+    Args:
+    model: O modelo treinado a ser avaliado.
+    x_test: O conjunto de teste usado para gerar previsões.
+    y_test: Os valores reais do RUL para o conjunto de teste.
+    run_id: O ID da execução no MLflow para registar as métricas e artefatos.
+    Returns:    
+    mae: O erro absoluto médio entre as previsões e os valores reais.
+    rmse: A raiz do erro quadrático médio entre as previsões e os valores reais
+    r2: O coeficiente de determinação (R²) que indica a qualidade do ajuste do modelo.
     """
     print(f"Início da avaliação estatística (Run ID: {run_id})...")
     
     # 1. Geração das Previsões
-    y_pred = model.predict(X_test)
+    y_pred = model.predict(x_test)
     
     # 2. Cálculo das Métricas Matemáticas
     mae = mean_absolute_error(y_test, y_pred)
@@ -34,7 +57,7 @@ def evaluate_model(model, X_test, y_test, run_id):
         mlflow.log_metric("r2", r2)
         
         # 4. Geração de Gráficos de Validação
-        # Garantir que a pasta de exportação local existe (ideal para o relatório do PIBIC)
+        # Garantindo que a pasta de exportação local existe
         plots_dir = config.BASE_DIR / "docs" / "plots"
         plots_dir.mkdir(parents=True, exist_ok=True)
         

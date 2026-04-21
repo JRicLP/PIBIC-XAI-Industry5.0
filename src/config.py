@@ -81,12 +81,11 @@ MLFLOW_TRACKING_URI = f"file:///{MLRUNS_DIR.as_posix()}"
 # 5. Inicialização das pastas:
 
 def create_directories():
-
     """ 
     Função para criar as pastas necessárias para armazenar os dados brutos, processados e os experimentos do MLflow.
     Utiliza o método `mkdir` do pathlib com `parents=True` para criar toda a hierarquia de pastas, e `exist_ok=True` para evitar erros caso as pastas já existam.
     """
-
+    
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
