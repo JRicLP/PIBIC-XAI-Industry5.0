@@ -1,15 +1,18 @@
 """ 
-Este módulo é responsável por avaliar o modelo de previsão de RUL utilizando o 
-dataset da NASA C-Maps. Ele segue as seguintes etapas:
+Este módulo é responsável por avaliar o desempenho dos modelos treinados usando métricas de regressão
+(MAE, RMSE, R²) e gerar gráficos de validação individualizados (Real vs Previsto e Distribuição dos Resíduos).
+As métricas e gráficos são registados no MLflow para cada modelo avaliado. O módulo é projetado para ser
+chamado a partir do main.py, onde os modelos treinados e os dados de teste são passados para avaliação.
 
-1. Geração das previsões do modelo para o conjunto de teste.
-2. Cálculo das métricas de regressão: MAE, RMSE e R².
-3. Registo das métricas no MLflow para rastreamento e comparação entre experimentos.
-4. Geração de gráficos de validação: Real vs Previsto e Distribuição dos Resíduos.
-5. Exportação dos gráficos em alta resolução para análise visual e registro
-como artefatos no MLflow.
-6. Retorno das métricas calculadas para possíveis usos futuros
-(ex: relatórios, dashboards ou análises adicionais).
+Passos principais:
+1. Geração das Previsões: O modelo treinado é usado para gerar previsões com base no conjunto de teste.
+2. Cálculo das Métricas Matemáticas: As métricas de regressão (MAE, RMSE, R²) são calculadas para
+quantificar o desempenho do modelo.
+3. Registo no MLflow: As métricas calculadas são registadas na mesma execução do MLflow onde o modelo foi treinado.
+4. Geração de Gráficos de Validação: São criados gráficos de dispersão (Real vs Previsto) e histogramas
+(Distribuição dos Resíduos) para análise visual do desempenho do modelo.
+5. Registo dos Artefactos no MLflow: Os gráficos gerados são salvos localmente e registados como
+artefactos no MLflow para referência futura.
 """
 
 import matplotlib.pyplot as plt
@@ -20,9 +23,9 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from src import config
 
-def evaluate_model(model, x_test, y_test, run_id):
+def evaluate_model(model, x_test, y_test, run_id, model_name):
     """
-    Calcula as métricas de regressão, gera gráficos de validação
+    Calcula as métricas de regressão, gera gráficos de validação individualizados
     e regista os resultados e artefactos no MLflow.
 
     Args:
@@ -30,6 +33,8 @@ def evaluate_model(model, x_test, y_test, run_id):
     x_test: O conjunto de teste usado para gerar previsões.
     y_test: Os valores reais do RUL para o conjunto de teste.
     run_id: O ID da execução no MLflow para registar as métricas e artefatos.
+    model_name: O nome do modelo (string) para nomear os gráficos exportados.
+    
     Returns:    
     mae: O erro absoluto médio entre as previsões e os valores reais.
     rmse: A raiz do erro quadrático médio entre as previsões e os valores reais
@@ -61,28 +66,28 @@ def evaluate_model(model, x_test, y_test, run_id):
         plots_dir = config.BASE_DIR / "docs" / "plots"
         plots_dir.mkdir(parents=True, exist_ok=True)
         
-        #Gráfico 1: Real vs Previsto
+        # Gráfico 1: Real vs Previsto
         plt.figure(figsize=(10, 6))
         plt.scatter(y_test, y_pred, alpha=0.5, color='#1f77b4') # Azul padrão
         plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
         plt.xlabel("RUL Real (Ciclos de Vida)")
         plt.ylabel("RUL Previsto (Ciclos de Vida)")
-        plt.title("Validação do Modelo: RUL Real vs Previsto")
+        plt.title(f"Validação do Modelo ({model_name}): RUL Real vs Previsto")
         plt.grid(True, linestyle='--', alpha=0.7)
-        scatter_path = plots_dir / "real_vs_previsto.png"
+        scatter_path = plots_dir / f"{model_name}_real_vs_previsto.png"
         plt.savefig(scatter_path, dpi=300, bbox_inches='tight')
         plt.close()
         
-        #Gráfico 2: Distribuição dos Resíduos (Erros)
+        # Gráfico 2: Distribuição dos Resíduos (Erros)
         residuos = y_test - y_pred
         plt.figure(figsize=(10, 6))
         sns.histplot(residuos, bins=50, kde=True, color='#9467bd') # Roxo
         plt.axvline(0, color='r', linestyle='--', lw=2)
         plt.xlabel("Erro Residual (Ciclos)")
         plt.ylabel("Frequência")
-        plt.title("Análise de Erro: Distribuição dos Resíduos")
+        plt.title(f"Análise de Erro ({model_name}): Distribuição dos Resíduos")
         plt.grid(True, linestyle='--', alpha=0.7)
-        residuos_path = plots_dir / "distribuicao_residuos.png"
+        residuos_path = plots_dir / f"{model_name}_distribuicao_residuos.png"
         plt.savefig(residuos_path, dpi=300, bbox_inches='tight')
         plt.close()
         
@@ -90,9 +95,9 @@ def evaluate_model(model, x_test, y_test, run_id):
         mlflow.log_artifact(str(scatter_path), artifact_path="evaluation_plots")
         mlflow.log_artifact(str(residuos_path), artifact_path="evaluation_plots")
         
-    print("Avaliação estatística concluída. Métricas e gráficos registados no MLflow.")
+    print(f"Avaliação estatística para {model_name} concluída. Registado no MLflow.")
     
     return mae, rmse, r2
 
 if __name__ == "__main__":
-    print("Este guião destina-se a ser orquestrado pelo main.py")
+    print("Este guia destina-se a ser orquestrado pelo main.py e não deve ser executado diretamente.")
