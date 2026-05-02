@@ -1,5 +1,20 @@
+# 1. Ambientes Virtuais e Cache
 .venv/
 __pycache__/
 *.ipynb_checkpoints
+
+# 2. Dados e Logs Locais de Treinamento
 data/
 mlruns/
+catboost_info/
+
+# 3. Artefatos Gerados Dinamicamente
+docs/plots/
+docs/reports/
+
+# 4. Variáveis de Ambiente e Segurança
+.env
+
+# 5. Arquivos de Sistema Operacional
+.DS_Store
+Thumbs.db

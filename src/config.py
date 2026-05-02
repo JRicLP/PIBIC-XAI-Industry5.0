@@ -1,13 +1,17 @@
 """
-Este módulo centraliza todas as configurações globais do projeto, incluindo
-caminhos de diretórios,parâmetros do modelo e configurações do MLflow.
-
-Ao manter essas informações em um único arquivo, garantimos que o código seja mais organizado,
-fácil de manter e que as mudanças futuras possam ser feitas de forma rápida e sem a necessidade
-de modificar múltiplos arquivos.
+Este módulo de configuração centraliza todas as constantes, caminhos e parâmetros
+utilizados ao longo do projeto. Ele é projetado para ser importado por outros módulos,
+garantindo que todas as partes do código utilizem as mesmas configurações e facilitando
+a manutenção futura.
 """
+# Atualização: Importação de modelos específicos para a arena de modelos
 
 from pathlib import Path
+from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
+from catboost import CatBoostRegressor
 
 # 1. Diretorios e caminho base:
 
@@ -49,29 +53,48 @@ SENSOR_COLUMNS = [f"sensor_{i}" for i in range(1, 22)]
 # Junção de todas as colunas para a leitura do .txt original
 ALL_COLUMNS = INDEX_COLUMNS + SETTING_COLUMNS + SENSOR_COLUMNS
 
-# 3. Hiperparametros do modelo (Random Forest):
+# 3. Arena de Modelos - Atualização
 
 """
-Hiperparâmetros do modelo Random Forest centralizados em um dicionário para facilitar
-o rastreamento no MLflow e a manutenção do código.
-
-Ao manter esses parâmetros em um único local, garantimos que as mudanças futuras possam ser
-feitas de forma rápida e sem a necessidade de modificar múltiplos arquivos, além de facilitar
-a comparação entre diferentes experimentos.
+Dicionário contendo os modelos e hiperparâmetros exatos baseados na Tabela 3 do
+artigo de referência. Isso permite iterar facilmente sobre todos os algoritmos durante
+o treinamento.
 """
-
-# Dicionário centralizando os parâmetros para facilitar o rastreamento no MLflow
-MODEL_PARAMS = {
-    "n_estimators": 100,
-    "max_depth": 10,  # Evita overfitting nas árvores
-    "random_state": 42,  # Garante a reprodutibilidade estatística
-    "n_jobs": -1,  # Utiliza todos os núcleos do processador
+MODELS_TO_TRAIN = {
+    "Linear_Regression": LinearRegression(
+        fit_intercept=True, 
+        n_jobs=None
+    ),
+    "KNN": KNeighborsRegressor(
+        n_neighbors=10
+    ),
+    "Random_Forest": RandomForestRegressor(
+        n_estimators=1200, 
+        random_state=42, 
+        n_jobs=-1
+    ),
+    "XGBoost": XGBRegressor(
+        n_estimators=100, 
+        learning_rate=0.1, 
+        max_depth=3, 
+        objective='reg:squarederror', 
+        random_state=42
+    ),
+    "CatBoost": CatBoostRegressor(
+        iterations=1000, 
+        learning_rate=0.03, 
+        depth=6, 
+        loss_function='RMSE', 
+        logging_level='Silent', 
+        random_state=42
+    )
 }
 
 # 4. Configuracoes do ML Flow:
 
 """    
-Configurações do MLflow para rastreamento de experimentos, incluindo o nome do experimento e o URI de rastreamento.
+Configurações do MLflow para rastreamento de experimentos, incluindo o nome
+do experimento e o URI de rastreamento.
 """
 
 MLFLOW_EXPERIMENT_NAME = "NASA_CMAPSS_RUL_Prediction"
@@ -82,8 +105,10 @@ MLFLOW_TRACKING_URI = f"file:///{MLRUNS_DIR.as_posix()}"
 
 def create_directories():
     """ 
-    Função para criar as pastas necessárias para armazenar os dados brutos, processados e os experimentos do MLflow.
-    Utiliza o método `mkdir` do pathlib com `parents=True` para criar toda a hierarquia de pastas, e `exist_ok=True` para evitar erros caso as pastas já existam.
+    Função para criar as pastas necessárias para armazenar os dados brutos,
+    processados e os experimentos do MLflow.
+    Utiliza o método `mkdir` do pathlib com `parents=True` para criar toda a hierarquia de pastas,
+    e `exist_ok=True` para evitar erros caso as pastas já existam.
     """
     
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
