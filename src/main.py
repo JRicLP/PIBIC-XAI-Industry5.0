@@ -52,7 +52,7 @@ def main():
             model, x_test, y_test, run_id = run_training_pipeline(nome_modelo, instancia_modelo)
             
             # Avaliação Estatística
-            mae, rmse, r2 = evaluate_model(model, x_test, y_test, run_id, nome_modelo)
+            mae, rmse, r2, nasa_score_value = evaluate_model(model, x_test, y_test, run_id, nome_modelo)
             
             # Verificando se o modelo atual é o melhor
             if r2 > best_r2:
@@ -74,7 +74,7 @@ def main():
 
     # 4. Explicabilidade (XAI) e Assistente LLM (Apenas com o Campeão!):
     print(f"\n[Fase 4] XAI e Tradução para o Operador ({campeao_nome})")
-    id_critico, rul, sensor_1, sensor_2 = generate_explanations(campeao_model, campeao_x_test, campeao_run_id)
+    id_critico, rul, sensor_1, sensor_2, df_contributions = generate_explanations(campeao_model, campeao_x_test, campeao_run_id)
     generate_operator_report(id_critico, rul, sensor_1, sensor_2)
 
     print("\nExecução do Pipeline Finalizada com Sucesso!")

@@ -14,6 +14,7 @@ das explicações para recomendações acionáveis para os operadores de pista.
 
 import mlflow
 import pandas as pd
+import numpy as np
 from shapash.explainer.smart_explainer import SmartExplainer
 
 # Importa as configurações globais
@@ -44,8 +45,24 @@ def generate_explanations(model, x_test, run_id):
     # 2. Identificação do Motor em Estado Crítico
     print("Extraindo fatores críticos da caixa-preta...")
     y_pred = pd.Series(model.predict(x_test), index=x_test.index)
-    id_critico = y_pred.idxmin()
-    rul_predito = y_pred.min()
+
+    # Atualização: Identificamos o motor com a pior previsão de RUL (menor valor previsto)
+    if hasattr(model, 'estimators_'):
+        # Calcula o Desvio Padrão entre as árvores para identificar a incerteza
+        preds_por_arvore = np.array([
+            arvore.predict(x_test) for arvore in model.estimators_  
+        ])
+        incerteza = pd.Series(preds_por_arvore.std(axis=0), index=x_test.index)
+        # Combina a previsão média com a incerteza para identificar o motor mais crítico
+        risco_combinado = y_pred - incerteza  # Penaliza previsões com alta incerteza
+        id_critico = risco_combinado.idxmin()
+        print(f"Motor crítico identificado com base na combinação de RUL previsto e incerteza: Index {id_critico}")
+    else:
+        id_critico = y_pred.idxmin()
+        incerteza = None
+        print(f"Motor crítico identificado com base na previsão de RUL: Index {id_critico}")
+
+    rul_predito = y_pred[id_critico]
     # Extraímos as variáveis que causaram a pior previsão
     df_contributions = xpl.to_pandas(max_contrib=2)
     fatores = df_contributions.loc[id_critico]
@@ -75,7 +92,7 @@ def generate_explanations(model, x_test, run_id):
     print(f" Motor mais crítico detectado: Index {id_critico} (RUL Estimado: {rul_predito:.1f} ciclos)")
     print(f" Sensores responsáveis pela anomalia: {sensor_1} e {sensor_2}")
     
-    return id_critico, rul_predito, sensor_1, sensor_2
+    return id_critico, rul_predito, sensor_1, sensor_2, df_contributions
 
 if __name__ == "__main__":
     print("Este script destina-se a ser orquestrado pelo main.py")

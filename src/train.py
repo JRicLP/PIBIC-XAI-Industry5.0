@@ -17,8 +17,7 @@ O fluxo de treinamento é o seguinte:
 import mlflow
 import mlflow.sklearn
 import pandas as pd
-from sklearn.model_selection import train_test_split
-
+import numpy as np
 from src import config
 
 # Atualização - Flexibilidade para treinar diferentes modelos da arena de modelos definida no config.py
@@ -43,11 +42,22 @@ def run_training_pipeline(model_name, model_instance):
         raise FileNotFoundError(f"Arquivo não encontrado: {data_path}. Execute o pipeline de dados primeiro.")
     
     df = pd.read_csv(data_path)
-    X = df.drop(columns=['engine_id', 'time_cycle', 'RUL'])
-    y = df['RUL']
     
-    # OBS: Removemos o random_state global daqui, passando 42 fixo para o split manter a consistência
-    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Atualização: Divisão temporal por motor, evitando Data Leakage
+    engine_ids = df['engine_id'].unique()
+    np.random.seed(42)
+    np.random.shuffle(engine_ids)
+    n_test = int(0.2 * len(engine_ids))
+    test_engine_ids = engine_ids[:n_test]
+
+    train_mask = ~df['engine_id'].isin(test_engine_ids)
+    df_train = df[train_mask]
+    df_test = df[~train_mask]
+
+    x_train = df_train.drop(columns=['engine_id', 'time_cycle', 'RUL'])
+    y_train = df_train['RUL']
+    x_test = df_test.drop(columns=['engine_id', 'time_cycle', 'RUL'])
+    y_test = df_test['RUL']
 
     # 3. Inicialização do Registro no MLflow
     with mlflow.start_run(run_name=model_name) as run:
