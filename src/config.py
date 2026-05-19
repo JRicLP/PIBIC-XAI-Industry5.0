@@ -21,6 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Pastas de Dados
 DATA_DIR = BASE_DIR / "data"
 RAW_DATA_DIR = DATA_DIR / "raw" / "nasa"
+NASA_DATA_DIR = RAW_DATA_DIR
 PROCESSED_DATA_DIR = DATA_DIR / "processed" / "nasa"
 
 # Pasta do MLflow

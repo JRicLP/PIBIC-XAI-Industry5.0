@@ -1,30 +1,124 @@
-# Explainable Models for Industrial Processes: Advances and Applications of AI in Industry 5.0
+# Explainable Models for Industrial Processes
 
 ![Status](https://img.shields.io/badge/Status-In_Development-yellow)
 
-## About the Project
-This repository contains the software artifacts and experiments developed during the Scientific Initiation project (PIBIC) linked to the University of Pernambuco (UPE).
+Software artifacts and experiments for the Scientific Initiation project at the University of Pernambuco (UPE).
 
-**Theme:** Explainable Models for Industrial Processes: Advances and Applications of AI in Industry 5.0
+**Theme:** Explainable Models for Industrial Processes: Advances and Applications of AI in Industry 5.0.
 
-**Objective:** Investigate and implement Explainable Artificial Intelligence (XAI) techniques to promote transparency, trust, and safety in industrial systems, aligned with the principles of Industry 5.0.
+**Goal:** build predictive maintenance pipelines with explainability, auditability and operator-oriented reports for industrial datasets, with emphasis on the NASA C-MAPSS Remaining Useful Life (RUL) problem.
 
-## Project proposals
-* Evaluate the impact of XAI techniques (LIME, SHAP, etc.) on the reliability of processes.
-* Develop prototypes of industrial systems with explanation capabilities.
-* Validate the usability of explanations for human operators.
+## Problem
 
-## Technologies
-* **Language:** Python 3.10
-* **XAI:** Shapash, SHAP, LIME
-* **Modeling:** Scikit-learn, XGBoost, Random Forest (Classifier and Regression)
-* **Data:** Public industrial datasets (AI4I 2020 Predictive Maintenance, UCI Hydraulic Systems, Nasa C-Maps)
+The NASA C-MAPSS dataset simulates turbofan engine degradation. The main task is to predict the Remaining Useful Life (RUL) of each engine from operational cycles and sensor readings. The project combines regression models, explainability reports and an LLM assistant to make model outputs easier to inspect and act on.
 
-## Repository Structure
-* /data: Datasets used (or scripts for downloading them).  
-* /notebooks: Jupyter Notebooks with exploratory experiments.  
-* /src: Source code for prototypes and dashboards.  
-* /docs: Reports and supplementary documentation.
+## Setup
+
+```bash
+python -m venv .venv
+```
+
+```bash
+pip install -r requirements.txt
+```
+
+## Configuration
+
+Create a local environment file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Then set:
+
+```env
+GEMINI_API_KEY=sua_chave_aqui
+```
+
+The `.env` file is ignored by Git. The public template is `.env.example`.
+
+## Execution
+
+### Modular Pipeline
+
+```bash
+python -m src.main
+```
+
+The modular pipeline runs ETL, model training, evaluation, Shapash explainability and the Gemini-based operator report.
+
+### Notebooks
+
+For the NASA workflow, run:
+
+```text
+08 -> 09 -> 10 -> 11
+```
+
+- `08_etl_nasa_cmaps.ipynb`: loads and processes NASA C-MAPSS data.
+- `09_auditoria_tecnica_nasa.ipynb`: trains and audits the RUL model with Shapash.
+- `10_registro_mlflow_nasa.ipynb`: registers experiment artifacts in MLflow.
+- `11_assistente_llm_operador.ipynb`: generates an operator-oriented report with Gemini.
+
+## Project Architecture
+
+```text
+src/
+  config.py           Shared paths, constants and model arena
+  data_pipeline.py    NASA C-MAPSS ETL
+  train.py            Group-aware model training
+  evaluation.py       Regression metrics and validation plots
+  explainability.py   Shapash reports and critical-engine extraction
+  llm_assistant.py    Gemini report for operators
+
+notebooks/
+  01-07               AI4I and hydraulic experiments
+  08-11               NASA C-MAPSS workflow
+
+docs/
+  nasa/               Regenerable NASA reports and figures
+```
+
+The official raw NASA path is `data/raw/nasa/`, exposed in code as `NASA_DATA_DIR`/`RAW_DATA_DIR` in `src.config`. Processed NASA data is stored in `data/processed/nasa/`.
+
+## Results
+
+Current NASA baseline report:
+
+| Dataset | Model | MAE | RMSE |
+| --- | --- | ---: | ---: |
+| NASA C-MAPSS FD001 | Random Forest Regressor | 29.6888 | 41.5214 |
+
+Validation figure:
+
+```text
+docs/nasa/Verificacao_RUL_Real_vs_Predito.png
+```
+
+Shapash HTML reports are regenerable artifacts and are ignored by Git.
+
+## Explainability
+
+Shapash is used to generate global feature-importance reports and local explanations for the most critical engine in the test set. The modular pipeline returns operational metadata (`engine_id`, `time_cycle`, `rul_predito`) so the report identifies the real engine and cycle, not only a dataframe index.
+
+## LLM Assistant
+
+The Gemini assistant receives the critical-engine diagnosis and the main contributing sensors, then produces a short maintenance-oriented report. API access is configured through `GEMINI_API_KEY` in `.env`; no API key should be committed to the repository.
+
+## Reproducibility
+
+- Dependencies are listed in UTF-8 in `requirements.txt`.
+- Notebook outputs are stripped before commit.
+- `nbstripout` is installed as a Git filter for this repository.
+- Generated data, MLflow runs, local environment files and Shapash HTML artifacts are ignored.
+
+## Bibliography
+
+- NASA C-MAPSS Turbofan Engine Degradation Simulation Data Set.
+- Shapash documentation for model explainability dashboards.
+- MLflow documentation for experiment tracking.
+- Google GenAI SDK documentation for Gemini integration.
 
 ## License
 
