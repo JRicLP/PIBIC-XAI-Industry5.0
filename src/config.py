@@ -13,6 +13,9 @@ from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from catboost import CatBoostRegressor
 
+SEED = 42
+RUL_CAP = 125
+
 # 1. Diretorios e caminho base:
 
 # Captura o diretório raiz do projeto
@@ -34,9 +37,9 @@ Configurações específicas para o dataset da NASA C-Maps, incluindo URLs,
 nomes de arquivos e estrutura das colunas.
 
 Essas configurações são utilizadas em todo o pipeline para garantir consistência
-e facilitar a manutenção do código. 
+e facilitar a manutenção do código.
 
-A centralização dessas informações em um único arquivo de configuração permite 
+A centralização dessas informações em um único arquivo de configuração permite
 que ajustes futuros sejam feitos de forma rápida e sem a necessidade de modificar múltiplos arquivos.
 """
 
@@ -45,6 +48,7 @@ TRAIN_FILE = "train_FD001.txt"
 TEST_FILE = "test_FD001.txt"
 RUL_FILE = "RUL_FD001.txt"
 PROCESSED_FILE_NAME = "nasa_cmapss_fd001_processed.csv"
+PROCESSED_OFFICIAL_TEST_FILE_NAME = "nasa_cmapss_fd001_official_test.csv"
 
 # Nomenclatura oficial das colunas:
 INDEX_COLUMNS = ["engine_id", "time_cycle"]
@@ -53,6 +57,33 @@ SENSOR_COLUMNS = [f"sensor_{i}" for i in range(1, 22)]
 
 # Junção de todas as colunas para a leitura do .txt original
 ALL_COLUMNS = INDEX_COLUMNS + SETTING_COLUMNS + SENSOR_COLUMNS
+
+FEATURES_DICT_NASA = {
+    "setting_1": "Altitude setting",
+    "setting_2": "Mach number setting",
+    "setting_3": "Throttle resolver angle",
+    "sensor_1": "Total temperature at fan inlet",
+    "sensor_2": "Total temperature at LPC outlet",
+    "sensor_3": "Total temperature at HPC outlet",
+    "sensor_4": "Total temperature at LPT outlet",
+    "sensor_5": "Pressure at fan inlet",
+    "sensor_6": "Total pressure in bypass duct",
+    "sensor_7": "Total pressure at HPC outlet",
+    "sensor_8": "Physical fan speed",
+    "sensor_9": "Physical core speed",
+    "sensor_10": "Engine pressure ratio",
+    "sensor_11": "Static pressure at HPC outlet",
+    "sensor_12": "Ratio of fuel flow to Ps30",
+    "sensor_13": "Corrected fan speed",
+    "sensor_14": "Corrected core speed",
+    "sensor_15": "Bypass ratio",
+    "sensor_16": "Burner fuel-air ratio",
+    "sensor_17": "Bleed enthalpy",
+    "sensor_18": "Required fan speed",
+    "sensor_19": "Required fan conversion speed",
+    "sensor_20": "High-pressure turbine coolant bleed",
+    "sensor_21": "Low-pressure turbine coolant bleed",
+}
 
 # 3. Arena de Modelos - Atualização
 
@@ -63,37 +94,37 @@ o treinamento.
 """
 MODELS_TO_TRAIN = {
     "Linear_Regression": LinearRegression(
-        fit_intercept=True, 
+        fit_intercept=True,
         n_jobs=None
     ),
     "KNN": KNeighborsRegressor(
         n_neighbors=10
     ),
     "Random_Forest": RandomForestRegressor(
-        n_estimators=1200, 
-        random_state=42, 
+        n_estimators=1200,
+        random_state=SEED,
         n_jobs=-1
     ),
     "XGBoost": XGBRegressor(
-        n_estimators=100, 
-        learning_rate=0.1, 
-        max_depth=3, 
-        objective='reg:squarederror', 
-        random_state=42
+        n_estimators=100,
+        learning_rate=0.1,
+        max_depth=3,
+        objective='reg:squarederror',
+        random_state=SEED
     ),
     "CatBoost": CatBoostRegressor(
-        iterations=1000, 
-        learning_rate=0.03, 
-        depth=6, 
-        loss_function='RMSE', 
-        logging_level='Silent', 
-        random_state=42
+        iterations=1000,
+        learning_rate=0.03,
+        depth=6,
+        loss_function='RMSE',
+        logging_level='Silent',
+        random_state=SEED
     )
 }
 
 # 4. Configuracoes do ML Flow:
 
-"""    
+"""
 Configurações do MLflow para rastreamento de experimentos, incluindo o nome
 do experimento e o URI de rastreamento.
 """
@@ -105,12 +136,12 @@ MLFLOW_TRACKING_URI = f"file:///{MLRUNS_DIR.as_posix()}"
 # 5. Inicialização das pastas:
 
 def create_directories():
-    """ 
+    """
     Função para criar as pastas necessárias para armazenar os dados brutos,
     processados e os experimentos do MLflow.
     Utiliza o método `mkdir` do pathlib com `parents=True` para criar toda a hierarquia de pastas,
     e `exist_ok=True` para evitar erros caso as pastas já existam.
     """
-    
+
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
