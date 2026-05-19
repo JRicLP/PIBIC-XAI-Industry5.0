@@ -82,4 +82,3 @@ def generate_operator_report(id_critico, rul_predito, sensor_1, sensor_2):
 
 if __name__ == "__main__":
     print("Este script destina-se a ser orquestrado pelo main.py")
-    

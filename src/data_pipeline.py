@@ -20,6 +20,7 @@ import urllib.request
 import zipfile
 import pandas as pd
 from src import config
+from sklearn.preprocessing import MinMaxScaler
 
 def download_and_extract_data():
     """
@@ -81,6 +82,30 @@ def calculate_rul(df):
     
     return df
 
+# Atualização: Remoção de sensores de baixa variância e normalização dos dados
+
+def process_data(df):
+    """ 
+    Processa os dados removendo sensores de baixa variância e aplicando normalização.
+    Args:
+        df: DataFrame contendo os dados brutos com as colunas de identificação, settings e sensores.
+    Returns:
+        df: DataFrame processado com sensores de baixa variância removidos e dados normalizados.
+    """
+    print("Pré-processamento: Removendo sensores de baixa variância e aplicando normalização")
+    SENSORES_BAIXA_VARIANCIA = [
+        'sensor_1', 'sensor_5', 'sensor_10',
+        'sensor_16', 'sensor_18', 'sensor_19'
+    ]
+    df = df.drop(columns=SENSORES_BAIXA_VARIANCIA)
+
+    print("Normalização dos Sensores com MinMaxScaler")
+    sensors_cols = [col for col in df.columns if col.startswith('sensor')]
+    scaler = MinMaxScaler()
+    df[sensors_cols] = scaler.fit_transform(df[sensors_cols])
+
+    return df, scaler
+
 def run_etl_pipeline():
     """
     Função principal que orquestra as etapas de Extração, 
@@ -93,11 +118,15 @@ def run_etl_pipeline():
     df_raw = load_data()
     # 3. Transformação (Cálculo do alvo para a Regressão)
     df_processed = calculate_rul(df_raw)
-    # 4. Carga (Salvando o dado pronto para o treinamento)
+    # 4. Processamento adicional (Remoção de sensores de baixa variância e normalização)
+    df_processed, scaler = process_data(df_processed)
+    # 5. Carga (Salvando o dado pronto para o treinamento)
     save_path = config.PROCESSED_DATA_DIR / config.PROCESSED_FILE_NAME
     df_processed.to_csv(save_path, index=False)
     
     print(f"Pipeline de dados concluído! Dataset processado salvo em: {save_path}")
+
+    return scaler 
 
 if __name__ == "__main__":
     # Teste do pipeline de dados de forma isolada

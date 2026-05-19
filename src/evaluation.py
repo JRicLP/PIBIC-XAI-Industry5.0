@@ -23,6 +23,22 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from src import config
 
+# Atualização: Adicionando o parâmetro NASA scoring function para avaliação adicional
+
+def nasa_score(y_true, y_pred):
+    """ 
+    Calcula a função de pontuação personalizada da NASA para avaliar as
+    previsões de RUL, penalizando superestimações e subestimações de forma diferente.
+    Args:
+    y_true: Os valores reais do RUL.
+    y_pred: Os valores previstos do RUL.
+    Returns:
+    score: A pontuação média calculada usando a função de pontuação da NASA.
+    """
+    diff = y_pred - y_true # Positivo = Superestimação, Negativo = Subestimação
+    score = np.where(diff < 0, np.exp(-diff / 13) - 1, np.exp(diff / 10) - 1)
+    return float(np.sum(score))
+
 def evaluate_model(model, x_test, y_test, run_id, model_name):
     """
     Calcula as métricas de regressão, gera gráficos de validação individualizados
@@ -49,7 +65,9 @@ def evaluate_model(model, x_test, y_test, run_id, model_name):
     mae = mean_absolute_error(y_test, y_pred)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     r2 = r2_score(y_test, y_pred)
-    
+    nasa_score_value = nasa_score(y_test, y_pred) # Nova métrica de avaliação personalizada da NASA
+
+    print(f"   NASA Score (Assimétrico, Menor = Melhor): {nasa_score_value:.2f}")
     print(f"   MAE  (Erro Absoluto Médio): {mae:.2f} ciclos")
     print(f"   RMSE (Raiz do Erro Quadrático Médio): {rmse:.2f} ciclos")
     print(f"   R²   (Coeficiente de Determinação): {r2:.4f}")
@@ -60,7 +78,7 @@ def evaluate_model(model, x_test, y_test, run_id, model_name):
         mlflow.log_metric("mae", mae)
         mlflow.log_metric("rmse", rmse)
         mlflow.log_metric("r2", r2)
-        
+        mlflow.log_metric("nasa_score", nasa_score_value)
         # 4. Geração de Gráficos de Validação
         # Garantindo que a pasta de exportação local existe
         plots_dir = config.BASE_DIR / "docs" / "plots"
@@ -97,7 +115,7 @@ def evaluate_model(model, x_test, y_test, run_id, model_name):
         
     print(f"Avaliação estatística para {model_name} concluída. Registado no MLflow.")
     
-    return mae, rmse, r2
+    return mae, rmse, r2, nasa_score_value
 
 if __name__ == "__main__":
     print("Este guia destina-se a ser orquestrado pelo main.py e não deve ser executado diretamente.")
