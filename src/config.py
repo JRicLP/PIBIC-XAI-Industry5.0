@@ -113,6 +113,3 @@ def create_directories():
     
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-# Executa a criação de pastas ao importar o config
-create_directories()

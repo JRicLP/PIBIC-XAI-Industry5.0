@@ -11,15 +11,24 @@ técnicos em recomendações acionáveis para os mecânicos de pista.
 
 # Imports
 import os
-import google.generativeai as genai
+from google import genai
 
-def generate_operator_report(id_critico, rul_predito, sensor_1, sensor_2):
+def generate_operator_report(motor_critico, rul_predito=None, sensor_1=None, sensor_2=None):
 
     """
     Recebe a saída matemática do XAI e utiliza a API do Gemini
     para gerar um laudo técnico acionável para o mecânico de pista.
     """
     print("\nConectando ao Assistente LLM...")
+
+    if isinstance(motor_critico, dict):
+        engine_id = motor_critico["engine_id"]
+        time_cycle = motor_critico["time_cycle"]
+        rul_predito = motor_critico["rul_predito"]
+    else:
+        engine_id = motor_critico
+        time_cycle = None
+    id_critico = engine_id
 
     # Buscando a chave da API nas variáveis de ambiente do sistema
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -32,18 +41,17 @@ def generate_operator_report(id_critico, rul_predito, sensor_1, sensor_2):
         print(" Laudo do Assistente (Simulação)")
         print("="*50)
         print(
-            f"Atenção Mecânico: O motor de índice {id_critico} apresenta falha iminente "
+            f"Atenção Mecânico: O motor {engine_id} apresenta falha iminente "
             f"em aproximadamente {rul_predito:.0f} ciclos."
         )
         print(
             f"Inspecione imediatamente os componentes relacionados à {sensor_1}" 
-            f"e verifique também a integridade da {sensor_2}."
+            f" e verifique também a integridade da {sensor_2}."
         )
         return
 
     # Configuração real da API
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    client = genai.Client(api_key=api_key)
 
     # Ponto de Melhoria: Adicionar tratamento de erros mais robusto para lidar com falhas de rede,
     # respostas inesperadas da API ou limites de taxa, garantindo que o sistema seja resiliente.
@@ -57,7 +65,8 @@ def generate_operator_report(id_critico, rul_predito, sensor_1, sensor_2):
     Sua função é traduzir o diagnóstico de uma Inteligência Artificial para uma linguagem simples, direta e acionável.
 
     Dados da IA:
-    - Máquina (Motor Index): {id_critico}
+    - Motor: {engine_id}
+    - Ciclo operacional: {time_cycle if time_cycle is not None else "não informado"}
     - Vida Útil Restante Estimada (RUL): {rul_predito:.1f} ciclos até a falha crítica.
     - Principal fator causando a degradação: Anomalia no {sensor_1}.
     - Fator secundário: Alteração no {sensor_2}.
@@ -70,7 +79,10 @@ def generate_operator_report(id_critico, rul_predito, sensor_1, sensor_2):
 
     try:
         print("Gerando laudo técnico com IA Generativa...")
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
         print("\n" + "="*50)
         print("Laudo do Assistente de IA:")
         print("="*50)
