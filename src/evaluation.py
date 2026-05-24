@@ -39,7 +39,35 @@ def nasa_score(y_true, y_pred):
     score = np.where(diff < 0, np.exp(-diff / 13) - 1, np.exp(diff / 10) - 1)
     return float(np.sum(score))
 
-def evaluate_model(model, x_test, y_test, run_id, model_name):
+def calculate_mae_by_rul_range(y_true, y_pred):
+    """
+    Calcula o MAE para diferentes faixas de RUL (0-25, 25-75, 75+), permitindo uma análise mais granular
+    do desempenho do modelo em diferentes estágios de vida útil dos equipamentos.
+    Args:
+    y_true: Os valores reais do RUL.
+    y_pred: Os valores previstos do RUL.
+    Returns:
+    mae_by_range: Um dicionário contendo o MAE para cada faixa de RUL.
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+
+    ranges = {
+        "mae_critico_rul_0_25": y_true <= 25,
+        "mae_medio_rul_25_75": (y_true > 25) & (y_true <= 75),
+        "mae_distante_rul_75_plus": y_true > 75,
+    }
+
+    return {
+        name: (
+            float(mean_absolute_error(y_true[mask], y_pred[mask]))
+            if np.any(mask)
+            else np.nan
+        )
+        for name, mask in ranges.items()
+    }
+
+def evaluate_model(model, x_test, y_test, run_id, model_name, y_pred=None):
     """
     Calcula as métricas de regressão, gera gráficos de validação individualizados
     e regista os resultados e artefactos no MLflow.
@@ -59,18 +87,24 @@ def evaluate_model(model, x_test, y_test, run_id, model_name):
     print(f"Início da avaliação estatística (Run ID: {run_id})...")
     
     # 1. Geração das Previsões
-    y_pred = model.predict(x_test)
+    if y_pred is None:
+        y_pred = model.predict(x_test)
+    y_pred = np.asarray(y_pred)
     
     # 2. Cálculo das Métricas Matemáticas
     mae = mean_absolute_error(y_test, y_pred)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     r2 = r2_score(y_test, y_pred)
     nasa_score_value = nasa_score(y_test, y_pred) # Nova métrica de avaliação personalizada da NASA
+    mae_by_range = calculate_mae_by_rul_range(y_test, y_pred)
 
     print(f"   NASA Score (Assimétrico, Menor = Melhor): {nasa_score_value:.2f}")
     print(f"   MAE  (Erro Absoluto Médio): {mae:.2f} ciclos")
     print(f"   RMSE (Raiz do Erro Quadrático Médio): {rmse:.2f} ciclos")
     print(f"   R²   (Coeficiente de Determinação): {r2:.4f}")
+    print(f"   MAE critico (RUL 0-25): {mae_by_range['mae_critico_rul_0_25']:.2f} ciclos")
+    print(f"   MAE medio   (RUL 25-75): {mae_by_range['mae_medio_rul_25_75']:.2f} ciclos")
+    print(f"   MAE distante (RUL 75+): {mae_by_range['mae_distante_rul_75_plus']:.2f} ciclos")
     
     # 3. Registo no MLflow (reabrindo a Run do treino)
     with mlflow.start_run(run_id=run_id):
@@ -79,6 +113,9 @@ def evaluate_model(model, x_test, y_test, run_id, model_name):
         mlflow.log_metric("rmse", rmse)
         mlflow.log_metric("r2", r2)
         mlflow.log_metric("nasa_score", nasa_score_value)
+        for metric_name, metric_value in mae_by_range.items():
+            if not np.isnan(metric_value):
+                mlflow.log_metric(metric_name, metric_value)
         # 4. Geração de Gráficos de Validação
         # Garantindo que a pasta de exportação local existe
         plots_dir = config.BASE_DIR / "docs" / "plots"

@@ -29,8 +29,12 @@ def download_and_extract_data():
 
     zip_path = config.RAW_DATA_DIR / "CMAPSSData.zip"
     # Verificando se o arquivo de treino já foi extraído
-    train_file_path = config.RAW_DATA_DIR / config.TRAIN_FILE
-    if train_file_path.exists():
+    required_files = [
+        config.RAW_DATA_DIR / config.TRAIN_FILE,
+        config.RAW_DATA_DIR / config.TEST_FILE,
+        config.RAW_DATA_DIR / config.RUL_FILE,
+    ]
+    if all(path.exists() for path in required_files):
         print("Dataset bruto já existente. Pulando download.")
         return
 
@@ -41,13 +45,13 @@ def download_and_extract_data():
         zip_ref.extractall(config.RAW_DATA_DIR)
     print("Download e extração concluídos.")
 
-def load_data():
+def load_data(file_name=config.TRAIN_FILE):
     """
     Carrega o arquivo de treino txt delimitado por espaços e aplica 
     as nomenclaturas das colunas definidas no config.py.
     """
 
-    train_path = config.RAW_DATA_DIR / config.TRAIN_FILE
+    train_path = config.RAW_DATA_DIR / file_name
     print("Carregando dados brutos...")
     
     # O dataset original usa espaços como delimitadores e não possui cabeçalho
@@ -76,6 +80,7 @@ def calculate_rul(df):
     
     # Calcula o RUL contínuo
     df['RUL'] = df['max_cycle'] - df['time_cycle']
+    df['RUL'] = df['RUL'].clip(upper=config.RUL_CAP)
     
     # Remove a coluna auxiliar 'max_cycle' para manter o dataset limpo
     df.drop('max_cycle', axis=1, inplace=True)
@@ -84,7 +89,7 @@ def calculate_rul(df):
 
 # Atualização: Remoção de sensores de baixa variância e normalização dos dados
 
-def process_data(df):
+def process_data(df, scaler=None):
     """ 
     Processa os dados removendo sensores de baixa variância e aplicando normalização.
     Args:
@@ -101,10 +106,36 @@ def process_data(df):
 
     print("Normalização dos Sensores com MinMaxScaler")
     sensors_cols = [col for col in df.columns if col.startswith('sensor')]
-    scaler = MinMaxScaler()
-    df[sensors_cols] = scaler.fit_transform(df[sensors_cols])
+    if scaler is None:
+        scaler = MinMaxScaler()
+        df[sensors_cols] = scaler.fit_transform(df[sensors_cols])
+    else:
+        df[sensors_cols] = scaler.transform(df[sensors_cols])
 
     return df, scaler
+
+def build_official_test_set(scaler):
+    """
+    Processa o test_FD001 oficial e associa cada motor ao RUL_FD001.
+    O protocolo NASA usa apenas o ultimo ciclo disponivel de cada motor de teste.
+    """
+    df_test = load_data(config.TEST_FILE)
+
+    last_cycle_idx = df_test.groupby("engine_id")["time_cycle"].idxmax()
+    df_last_cycles = df_test.loc[last_cycle_idx].sort_values("engine_id").reset_index(drop=True)
+
+    rul_path = config.RAW_DATA_DIR / config.RUL_FILE
+    y_official = pd.read_csv(rul_path, sep=r'\s+', header=None, names=["RUL"])
+    y_official["RUL"] = y_official["RUL"].clip(upper=config.RUL_CAP)
+
+    if len(df_last_cycles) != len(y_official):
+        raise ValueError(
+            "Quantidade de motores no test_FD001.txt difere das linhas em RUL_FD001.txt."
+        )
+
+    df_last_cycles["RUL"] = y_official["RUL"].to_numpy()
+    df_processed_test, _ = process_data(df_last_cycles, scaler=scaler)
+    return df_processed_test
 
 def run_etl_pipeline():
     """
@@ -115,7 +146,7 @@ def run_etl_pipeline():
     # 1. Extração
     download_and_extract_data()
     # 2. Leitura
-    df_raw = load_data()
+    df_raw = load_data(config.TRAIN_FILE)
     # 3. Transformação (Cálculo do alvo para a Regressão)
     df_processed = calculate_rul(df_raw)
     # 4. Processamento adicional (Remoção de sensores de baixa variância e normalização)
@@ -123,8 +154,14 @@ def run_etl_pipeline():
     # 5. Carga (Salvando o dado pronto para o treinamento)
     save_path = config.PROCESSED_DATA_DIR / config.PROCESSED_FILE_NAME
     df_processed.to_csv(save_path, index=False)
+
+    df_official_test = build_official_test_set(scaler)
+    official_test_path = config.PROCESSED_DATA_DIR / config.PROCESSED_OFFICIAL_TEST_FILE_NAME
+    df_official_test.to_csv(official_test_path, index=False)
     
     print(f"Pipeline de dados concluído! Dataset processado salvo em: {save_path}")
+
+    print(f"Teste oficial NASA salvo em: {official_test_path}")
 
     return scaler 
 

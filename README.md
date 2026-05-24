@@ -12,6 +12,8 @@ Software artifacts and experiments for the Scientific Initiation project at the 
 
 The NASA C-MAPSS dataset simulates turbofan engine degradation. The main task is to predict the Remaining Useful Life (RUL) of each engine from operational cycles and sensor readings. The project combines regression models, explainability reports and an LLM assistant to make model outputs easier to inspect and act on.
 
+The NASA pipeline follows the common piecewise linear RUL target used in the literature: RUL values above 125 cycles are clipped to 125. This reduces the influence of very healthy early-life engines and improves comparability with published C-MAPSS work such as Heimes (2008) and Babu et al. (2016).
+
 ## Setup
 
 ```bash
@@ -46,7 +48,7 @@ The `.env` file is ignored by Git. The public template is `.env.example`.
 python -m src.main
 ```
 
-The modular pipeline runs ETL, model training, evaluation, Shapash explainability and the Gemini-based operator report.
+The modular pipeline runs ETL, model training, official NASA test-set evaluation, Shapash explainability and the Gemini-based operator report.
 
 ### Notebooks
 
@@ -98,6 +100,8 @@ docs/nasa/Verificacao_RUL_Real_vs_Predito.png
 
 Shapash HTML reports are regenerable artifacts and are ignored by Git.
 
+The official NASA evaluation uses `train_FD001.txt` for training and the last cycle of each engine in `test_FD001.txt`, compared against `RUL_FD001.txt`, for MAE, RMSE, R2, NASA Score and MAE by RUL range.
+
 ## Explainability
 
 Shapash is used to generate global feature-importance reports and local explanations for the most critical engine in the test set. The modular pipeline returns operational metadata (`engine_id`, `time_cycle`, `rul_predito`) so the report identifies the real engine and cycle, not only a dataframe index.
@@ -116,6 +120,8 @@ The Gemini assistant receives the critical-engine diagnosis and the main contrib
 ## Bibliography
 
 - NASA C-MAPSS Turbofan Engine Degradation Simulation Data Set.
+- Heimes, F. O. (2008). Recurrent neural networks for remaining useful life estimation.
+- Babu, G. S., Zhao, P., and Li, X. L. (2016). Deep convolutional neural network based regression approach for estimation of remaining useful life.
 - Shapash documentation for model explainability dashboards.
 - MLflow documentation for experiment tracking.
 - Google GenAI SDK documentation for Gemini integration.

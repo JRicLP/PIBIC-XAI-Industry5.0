@@ -14,8 +14,11 @@ O fluxo é organizado da seguinte forma:
 """
 
 # Imports
+import random
+import numpy as np
+
 from src import config
-from src.config import create_directories
+from src.config import SEED, create_directories
 from src.data_pipeline import run_etl_pipeline
 from src.evaluation import evaluate_model
 from src.explainability import generate_explanations
@@ -27,6 +30,9 @@ def main():
     Função principal que orquestra a execução de todo o pipeline.
     """  
     print("Iniciando o Pipeline da Indústria 5.0...")
+
+    random.seed(SEED)
+    np.random.seed(SEED)
 
     # Garante que a estrutura de diretórios existe
     create_directories()
@@ -56,7 +62,7 @@ def main():
             model, x_test, y_test, y_pred, test_metadata, run_id = run_training_pipeline(nome_modelo, instancia_modelo)
             
             # Avaliação Estatística
-            mae, rmse, r2, nasa_score_value = evaluate_model(model, x_test, y_test, run_id, nome_modelo)
+            mae, rmse, r2, nasa_score_value = evaluate_model(model, x_test, y_test, run_id, nome_modelo, y_pred=y_pred)
             
             # Verificando se o modelo atual é o melhor
             if r2 > best_r2:
@@ -89,7 +95,10 @@ def main():
         campeao_test_metadata,
         campeao_run_id
     )
-    generate_operator_report(motor_critico, sensor_1=sensor_1, sensor_2=sensor_2)
+    if motor_critico:
+        generate_operator_report(motor_critico, sensor_1=sensor_1, sensor_2=sensor_2)
+    else:
+        print("Assistente LLM ignorado porque a etapa de explicabilidade nao retornou caso critico.")
 
     print("\nExecução do Pipeline Finalizada com Sucesso!")
 
