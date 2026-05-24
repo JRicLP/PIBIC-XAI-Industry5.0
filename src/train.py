@@ -17,7 +17,7 @@ O fluxo de treinamento é o seguinte:
 import mlflow
 import mlflow.sklearn
 import pandas as pd
-import numpy as np
+from sklearn.model_selection import GroupShuffleSplit
 from src import config
 
 # Atualização - Flexibilidade para treinar diferentes modelos da arena de modelos definida no config.py
@@ -44,20 +44,27 @@ def run_training_pipeline(model_name, model_instance):
     df = pd.read_csv(data_path)
     
     # Atualização: Divisão temporal por motor, evitando Data Leakage
-    engine_ids = df['engine_id'].unique()
-    np.random.seed(42)
-    np.random.shuffle(engine_ids)
-    n_test = int(0.2 * len(engine_ids))
-    test_engine_ids = engine_ids[:n_test]
+    x = df.drop(columns=['engine_id', 'time_cycle', 'RUL'])
+    y = df['RUL']
+    groups = df["engine_id"]
 
-    train_mask = ~df['engine_id'].isin(test_engine_ids)
-    df_train = df[train_mask]
-    df_test = df[~train_mask]
+    gss = GroupShuffleSplit(
+        n_splits=1,
+        test_size=0.2,
+        random_state=42
+    )
 
-    x_train = df_train.drop(columns=['engine_id', 'time_cycle', 'RUL'])
-    y_train = df_train['RUL']
-    x_test = df_test.drop(columns=['engine_id', 'time_cycle', 'RUL'])
-    y_test = df_test['RUL']
+    train_idx, test_idx = next(
+        gss.split(x, y, groups=groups)
+    )
+
+    x_train = x.iloc[train_idx]
+    x_test = x.iloc[test_idx]
+    y_train = y.iloc[train_idx]
+    y_test = y.iloc[test_idx]
+    test_metadata = df.iloc[test_idx][
+        ["engine_id", "time_cycle"]
+    ].reset_index(drop=True)
 
     # 3. Inicialização do Registro no MLflow
     with mlflow.start_run(run_name=model_name) as run:
@@ -70,7 +77,8 @@ def run_training_pipeline(model_name, model_instance):
         mlflow.sklearn.log_model(model_instance, model_name)
         print(f"Treinamento concluído. Run ID: {run.info.run_id}")
         
-        return model_instance, x_test, y_test, run.info.run_id
+        y_pred = model_instance.predict(x_test)
+        return model_instance, x_test, y_test, y_pred, test_metadata, run.info.run_id
 
 if __name__ == "__main__":
     # Teste isolado para garantir que o pipeline de treinamento funcione corretamente

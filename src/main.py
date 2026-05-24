@@ -14,7 +14,8 @@ O fluxo é organizado da seguinte forma:
 """
 
 # Imports
-from src import config 
+from src import config
+from src.config import create_directories
 from src.data_pipeline import run_etl_pipeline
 from src.evaluation import evaluate_model
 from src.explainability import generate_explanations
@@ -28,7 +29,7 @@ def main():
     print("Iniciando o Pipeline da Indústria 5.0...")
 
     # Garante que a estrutura de diretórios existe
-    config.create_directories()
+    create_directories()
 
     # 1. Engenharia de Dados:
     print("\n[Fase 1] Engenharia e Processamento de Dados")
@@ -40,6 +41,9 @@ def main():
     campeao_model = None
     campeao_run_id = None
     campeao_x_test = None
+    campeao_y_test = None
+    campeao_y_pred = None
+    campeao_test_metadata = None
 
     print("\n[Fase 2 e 3] Iniciando o Torneio de Modelos Preditivos (RUL)")
     
@@ -49,7 +53,7 @@ def main():
             print(f"\n-> Avaliando: {nome_modelo}")
             
             # Treinamento
-            model, x_test, y_test, run_id = run_training_pipeline(nome_modelo, instancia_modelo)
+            model, x_test, y_test, y_pred, test_metadata, run_id = run_training_pipeline(nome_modelo, instancia_modelo)
             
             # Avaliação Estatística
             mae, rmse, r2, nasa_score_value = evaluate_model(model, x_test, y_test, run_id, nome_modelo)
@@ -61,6 +65,9 @@ def main():
                 campeao_model = model
                 campeao_run_id = run_id
                 campeao_x_test = x_test
+                campeao_y_test = y_test
+                campeao_y_pred = y_pred
+                campeao_test_metadata = test_metadata
 
     except FileNotFoundError as e:
         print(f"Aviso: {e}")
@@ -74,8 +81,15 @@ def main():
 
     # 4. Explicabilidade (XAI) e Assistente LLM (Apenas com o Campeão!):
     print(f"\n[Fase 4] XAI e Tradução para o Operador ({campeao_nome})")
-    id_critico, rul, sensor_1, sensor_2, df_contributions = generate_explanations(campeao_model, campeao_x_test, campeao_run_id)
-    generate_operator_report(id_critico, rul, sensor_1, sensor_2)
+    motor_critico, sensor_1, sensor_2, df_contributions = generate_explanations(
+        campeao_model,
+        campeao_x_test,
+        campeao_y_test,
+        campeao_y_pred,
+        campeao_test_metadata,
+        campeao_run_id
+    )
+    generate_operator_report(motor_critico, sensor_1=sensor_1, sensor_2=sensor_2)
 
     print("\nExecução do Pipeline Finalizada com Sucesso!")
 
