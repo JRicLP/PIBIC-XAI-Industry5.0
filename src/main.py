@@ -96,7 +96,13 @@ def main():
         campeao_run_id
     )
     if motor_critico:
-        generate_operator_report(motor_critico, sensor_1=sensor_1, sensor_2=sensor_2)
+        generate_operator_report(
+            motor_critico,
+            sensor_1=sensor_1,
+            sensor_2=sensor_2,
+            model_name=campeao_nome,
+            run_id=campeao_run_id
+        )
     else:
         print("Assistente LLM ignorado porque a etapa de explicabilidade nao retornou caso critico.")
 

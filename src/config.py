@@ -29,6 +29,7 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed" / "nasa"
 
 # Pasta do MLflow
 MLRUNS_DIR = BASE_DIR / "mlruns"
+REPORTS_DIR = BASE_DIR / "docs" / "reports"
 
 # 2. Configuracoes do Dataset (Nasa C-Maps)
 
@@ -129,7 +130,7 @@ Configurações do MLflow para rastreamento de experimentos, incluindo o nome
 do experimento e o URI de rastreamento.
 """
 
-MLFLOW_EXPERIMENT_NAME = "NASA_CMAPSS_RUL_Prediction"
+MLFLOW_EXPERIMENT_NAME = "NASA_CMAPSS_RUL_Official_Test_Complete"
 MLFLOW_TRACKING_URI = f"file:///{MLRUNS_DIR.as_posix()}"
 
 
@@ -145,3 +146,4 @@ def create_directories():
 
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)

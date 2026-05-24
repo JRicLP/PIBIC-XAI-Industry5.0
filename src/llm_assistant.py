@@ -11,9 +11,108 @@ técnicos em recomendações acionáveis para os mecânicos de pista.
 
 # Imports
 import os
+from pathlib import Path
+
+import mlflow
+from dotenv import load_dotenv
 from google import genai
 
-def generate_operator_report(motor_critico, rul_predito=None, sensor_1=None, sensor_2=None):
+from src import config
+
+def get_gemini_api_key():
+    """
+    Carrega o .env da raiz do projeto e retorna a chave do Gemini.
+    """
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    load_dotenv(dotenv_path=env_path)
+    return os.environ.get("GEMINI_API_KEY")
+
+def extract_response_text(response):
+    """
+    Extrai texto da resposta do Gemini mesmo quando response.text vier vazio.
+    """
+    text = getattr(response, "text", None)
+    if text:
+        return text.strip()
+
+    candidates = getattr(response, "candidates", None) or []
+    parts_text = []
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) if content else []
+        for part in parts or []:
+            part_text = getattr(part, "text", None)
+            if part_text:
+                parts_text.append(part_text)
+
+    return "\n".join(parts_text).strip()
+
+def print_empty_response_diagnostics(response):
+    """
+    Mostra informacoes uteis quando a API responde 200 OK, mas sem texto.
+    """
+    print("[Aviso] A API respondeu, mas nao retornou texto para o laudo.")
+
+    prompt_feedback = getattr(response, "prompt_feedback", None)
+    if prompt_feedback:
+        print(f"Prompt feedback: {prompt_feedback}")
+
+    candidates = getattr(response, "candidates", None) or []
+    for index, candidate in enumerate(candidates):
+        finish_reason = getattr(candidate, "finish_reason", None)
+        safety_ratings = getattr(candidate, "safety_ratings", None)
+        print(f"Candidato {index}: finish_reason={finish_reason}")
+        if safety_ratings:
+            print(f"Candidato {index}: safety_ratings={safety_ratings}")
+
+def save_operator_report(report_text, motor_critico, sensor_1, sensor_2, model_name=None, run_id=None):
+    """
+    Salva o laudo do operador em Markdown e registra no MLflow quando houver run_id.
+    """
+    if not report_text:
+        return None
+
+    engine_id = motor_critico.get("engine_id", "desconhecido") if isinstance(motor_critico, dict) else motor_critico
+    time_cycle = motor_critico.get("time_cycle", "nao informado") if isinstance(motor_critico, dict) else "nao informado"
+    rul_predito = motor_critico.get("rul_predito", "nao informado") if isinstance(motor_critico, dict) else "nao informado"
+    model_label = model_name or "modelo_desconhecido"
+
+    safe_model_name = str(model_label).replace(" ", "_")
+    report_path = config.REPORTS_DIR / f"operator_report_{safe_model_name}_engine_{engine_id}.md"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+
+    report_md = f"""# Laudo do Assistente LLM
+
+## Contexto
+
+- Modelo campeao: {model_label}
+- Engine ID: {engine_id}
+- Ciclo operacional: {time_cycle}
+- RUL predito: {rul_predito}
+- Fator principal: {sensor_1}
+- Fator secundario: {sensor_2}
+
+## Laudo
+
+{report_text}
+"""
+    report_path.write_text(report_md, encoding="utf-8")
+    print(f"Laudo do operador salvo em: {report_path}")
+
+    if run_id:
+        with mlflow.start_run(run_id=run_id):
+            mlflow.log_artifact(str(report_path), artifact_path="operator_reports")
+
+    return report_path
+
+def generate_operator_report(
+    motor_critico,
+    rul_predito=None,
+    sensor_1=None,
+    sensor_2=None,
+    model_name=None,
+    run_id=None
+):
 
     """
     Recebe a saída matemática do XAI e utiliza a API do Gemini
@@ -31,24 +130,24 @@ def generate_operator_report(motor_critico, rul_predito=None, sensor_1=None, sen
     id_critico = engine_id
 
     # Buscando a chave da API nas variáveis de ambiente do sistema
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = get_gemini_api_key()
 
     # Camada de simulação para o caso da API Key não ser encontrada:
     if not api_key:
-        print("Aviso: GEMINI_API_KEY não encontrada nas variáveis de ambiente.")
+        print("Aviso: GEMINI_API_KEY nao encontrada nas variaveis de ambiente.")
         print("Simulando a resposta do LLM para fins de teste de pipeline...\n")
-        print("="*50)
-        print(" Laudo do Assistente (Simulação)")
-        print("="*50)
-        print(
-            f"Atenção Mecânico: O motor {engine_id} apresenta falha iminente "
-            f"em aproximadamente {rul_predito:.0f} ciclos."
+        report_text = (
+            f"Atencao mecanico: O motor {engine_id} apresenta falha iminente "
+            f"em aproximadamente {rul_predito:.0f} ciclos. "
+            f"Inspecione imediatamente os componentes relacionados a {sensor_1} "
+            f"e verifique tambem a integridade de {sensor_2}."
         )
-        print(
-            f"Inspecione imediatamente os componentes relacionados à {sensor_1}" 
-            f" e verifique também a integridade da {sensor_2}."
-        )
-        return
+        print("="*50)
+        print(" Laudo do Assistente (Simulacao)")
+        print("="*50)
+        print(report_text)
+        save_operator_report(report_text, motor_critico, sensor_1, sensor_2, model_name, run_id)
+        return report_text
 
     # Configuração real da API
     client = genai.Client(api_key=api_key)
@@ -80,17 +179,24 @@ def generate_operator_report(motor_critico, rul_predito=None, sensor_1=None, sen
     try:
         print("Gerando laudo técnico com IA Generativa...")
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             contents=prompt
         )
+        report_text = extract_response_text(response)
         print("\n" + "="*50)
         print("Laudo do Assistente de IA:")
         print("="*50)
-        print(response.text.strip())
+        if report_text:
+            print(report_text)
+            save_operator_report(report_text, motor_critico, sensor_1, sensor_2, model_name, run_id)
+        else:
+            print_empty_response_diagnostics(response)
         print("="*50 + "\n") 
+        return report_text
         
     except Exception as e:
         print(f"[Error] Falha ao comunicar com a API do Gemini: {e}")
+        return None
 
 if __name__ == "__main__":
     print("Este script destina-se a ser orquestrado pelo main.py")
