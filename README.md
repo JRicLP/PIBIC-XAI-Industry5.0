@@ -75,7 +75,7 @@ src/
   llm_assistant.py    Gemini report for operators
 
 notebooks/
-  01-07               AI4I and hydraulic experiments
+  01-07               AI4I and Hydraulic experiments
   08-11               NASA C-MAPSS workflow
 
 docs/
