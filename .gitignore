@@ -11,6 +11,7 @@ catboost_info/
 # 3. Artefatos Gerados Dinamicamente
 docs/plots/
 docs/reports/
+docs/nasa/*.html
 
 # 4. Variáveis de Ambiente e Segurança
 .env
