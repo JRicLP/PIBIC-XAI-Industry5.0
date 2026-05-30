@@ -59,8 +59,8 @@ For the NASA workflow, run:
 ```
 
 - `08_etl_nasa_cmaps.ipynb`: loads and processes NASA C-MAPSS data.
-- `09_auditoria_tecnica_nasa.ipynb`: trains and audits the RUL model with Shapash.
-- `10_registro_mlflow_nasa.ipynb`: registers experiment artifacts in MLflow.
+- `09_auditoria_tecnica_nasa.ipynb`: demo notebook that calls the modular NASA pipeline from `src/`.
+- `10_registro_mlflow_nasa.ipynb`: deprecated historical notebook; MLflow logging now happens in `src/main.py`.
 - `11_assistente_llm_operador.ipynb`: generates an operator-oriented report with Gemini.
 
 ## Project Architecture
@@ -99,6 +99,13 @@ docs/nasa/Verificacao_RUL_Real_vs_Predito.png
 ```
 
 Shapash HTML reports are regenerable artifacts and are ignored by Git.
+
+Narrative NASA analysis:
+
+```text
+docs/RESULTADOS_NASA.md
+docs/nasa/resultados.json
+```
 
 The official NASA evaluation uses `train_FD001.txt` for training and the last cycle of each engine in `test_FD001.txt`, compared against `RUL_FD001.txt`, for MAE, RMSE, R2, NASA Score and MAE by RUL range.
 

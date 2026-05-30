@@ -23,7 +23,7 @@ from src.data_pipeline import run_etl_pipeline
 from src.evaluation import evaluate_model
 from src.explainability import generate_explanations
 from src.llm_assistant import generate_operator_report
-from src.train import run_training_pipeline
+from src.train import run_cross_validation, run_training_pipeline
 
 def main():
     """
@@ -57,6 +57,9 @@ def main():
         # Itera sobre o dicionário de modelos na configuração
         for nome_modelo, instancia_modelo in config.MODELS_TO_TRAIN.items():
             print(f"\n-> Avaliando: {nome_modelo}")
+
+            # Validacao cruzada cientifica no conjunto de treino, agrupada por motor.
+            run_cross_validation(nome_modelo, instancia_modelo)
             
             # Treinamento
             model, x_test, y_test, y_pred, test_metadata, run_id = run_training_pipeline(nome_modelo, instancia_modelo)

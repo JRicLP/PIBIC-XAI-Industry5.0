@@ -19,3 +19,7 @@ docs/nasa/*.html
 # 5. Arquivos de Sistema Operacional
 .DS_Store
 Thumbs.db
+
+# Temporário:
+RESULTADOS_NASA.md
+

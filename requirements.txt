@@ -10,5 +10,6 @@ seaborn
 matplotlib
 google-genai
 python-dotenv
+requests
 jupyter
 nbstripout

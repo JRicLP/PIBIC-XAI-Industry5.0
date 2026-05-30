@@ -1,0 +1,46 @@
+{
+  "dataset": "NASA C-MAPSS FD001",
+  "data_revisao": "2026-05-30",
+  "split": {
+    "metodo": "treino_oficial_fd001_mais_teste_oficial_fd001",
+    "test_size": null,
+    "seed": 42,
+    "agrupado_por": "engine_id",
+    "observacao": "Treino em train_FD001.txt e avaliacao no ultimo ciclo de cada motor em test_FD001.txt contra RUL_FD001.txt."
+  },
+  "preprocessamento": {
+    "rul_cap": 125,
+    "sensores_removidos": [
+      "sensor_1",
+      "sensor_5",
+      "sensor_10",
+      "sensor_16",
+      "sensor_18",
+      "sensor_19"
+    ],
+    "normalizacao": "MinMaxScaler"
+  },
+  "modelo_campeao": {
+    "nome": "CatBoost",
+    "hiperparametros": {
+      "iterations": 1000,
+      "learning_rate": 0.03,
+      "depth": 6,
+      "loss_function": "RMSE",
+      "logging_level": "Silent",
+      "random_state": 42
+    }
+  },
+  "metricas": {
+    "mae": 11.78739351547983,
+    "rmse": 16.78499181332626,
+    "r2": 0.8245584083534727,
+    "nasa_score": 772.8195579921694,
+    "mae_por_faixa": {
+      "0_25": 9.00520935160082,
+      "25_75": 13.268831406033703,
+      "75_mais": 12.091024914434357
+    }
+  },
+  "mlflow_run_id": "2f85d8faca744cf2af35cfe5eec64c00"
+}

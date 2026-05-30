@@ -16,8 +16,82 @@ O fluxo de treinamento é o seguinte:
 # Imports
 import mlflow
 import mlflow.sklearn
+import numpy as np
 import pandas as pd
+from sklearn.base import clone
+from sklearn.metrics import make_scorer, mean_absolute_error, r2_score
+from sklearn.model_selection import GroupKFold, cross_validate
 from src import config
+
+
+def _rmse_score(y_true, y_pred):
+    """Retorna RMSE para uso na validacao cruzada."""
+    return np.sqrt(np.mean((np.asarray(y_true) - np.asarray(y_pred)) ** 2))
+
+
+def run_cross_validation(model_name, model_instance, df=None, n_splits=5):
+    """
+    Executa validacao cruzada GroupKFold agrupada por engine_id no treino FD001.
+    Complementa o teste oficial NASA, sem substituir o treino final.
+    """
+    if df is None:
+        data_path = config.PROCESSED_DATA_DIR / config.PROCESSED_FILE_NAME
+        if not data_path.exists():
+            raise FileNotFoundError(f"Arquivo nao encontrado: {data_path}. Execute o pipeline de dados primeiro.")
+        df = pd.read_csv(data_path)
+
+    required_columns = {"engine_id", "time_cycle", "RUL"}
+    missing_columns = required_columns.difference(df.columns)
+    if missing_columns:
+        raise ValueError(f"Colunas obrigatorias ausentes para validacao cruzada: {sorted(missing_columns)}")
+
+    x = df.drop(columns=["engine_id", "time_cycle", "RUL"])
+    y = df["RUL"]
+    groups = df["engine_id"]
+
+    scoring = {
+        "mae": make_scorer(mean_absolute_error, greater_is_better=False),
+        "rmse": make_scorer(_rmse_score, greater_is_better=False),
+        "r2": make_scorer(r2_score),
+    }
+
+    print(f"\n[CV] {model_name}: GroupKFold(n_splits={n_splits})")
+    cv_results = cross_validate(
+        clone(model_instance),
+        x,
+        y,
+        cv=GroupKFold(n_splits=n_splits),
+        groups=groups,
+        scoring=scoring,
+        return_train_score=False,
+    )
+
+    mae_scores = -cv_results["test_mae"]
+    rmse_scores = -cv_results["test_rmse"]
+    r2_scores = cv_results["test_r2"]
+
+    summary = {
+        "cv_mae_mean": float(mae_scores.mean()),
+        "cv_mae_std": float(mae_scores.std()),
+        "cv_rmse_mean": float(rmse_scores.mean()),
+        "cv_rmse_std": float(rmse_scores.std()),
+        "cv_r2_mean": float(r2_scores.mean()),
+        "cv_r2_std": float(r2_scores.std()),
+    }
+
+    print(f"   MAE : {summary['cv_mae_mean']:.2f} +/- {summary['cv_mae_std']:.2f} ciclos")
+    print(f"   RMSE: {summary['cv_rmse_mean']:.2f} +/- {summary['cv_rmse_std']:.2f} ciclos")
+    print(f"   R2  : {summary['cv_r2_mean']:.4f} +/- {summary['cv_r2_std']:.4f}")
+
+    mlflow.set_tracking_uri(config.MLFLOW_TRACKING_URI)
+    mlflow.set_experiment(config.MLFLOW_EXPERIMENT_NAME)
+    with mlflow.start_run(run_name=f"{model_name}_GroupKFold_CV"):
+        mlflow.log_param("validation_protocol", "GroupKFold")
+        mlflow.log_param("n_splits", n_splits)
+        mlflow.log_param("grouped_by", "engine_id")
+        mlflow.log_metrics(summary)
+
+    return summary
 
 # Atualização - Flexibilidade para treinar diferentes modelos da arena de modelos definida no config.py
 def run_training_pipeline(model_name, model_instance):
