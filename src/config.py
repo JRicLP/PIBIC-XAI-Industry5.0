@@ -9,12 +9,10 @@ a manutenção futura.
 from pathlib import Path
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor
-from catboost import CatBoostRegressor
 
 SEED = 42
 RUL_CAP = 125
+N_OPTUNA_TRIALS = 60
 
 # 1. Diretorios e caminho base:
 
@@ -89,39 +87,21 @@ FEATURES_DICT_NASA = {
 # 3. Arena de Modelos - Atualização
 
 """
-Dicionário contendo os modelos e hiperparâmetros exatos baseados na Tabela 3 do
-artigo de referência. Isso permite iterar facilmente sobre todos os algoritmos durante
-o treinamento.
+Baselines interpretaveis mantidos com hiperparametros fixos. Os modelos avancados
+sao ajustados pelo Optuna no pipeline principal, usando o mesmo budget de trials
+para cada algoritmo.
 """
-MODELS_TO_TRAIN = {
+BASELINE_MODELS = {
     "Linear_Regression": LinearRegression(
         fit_intercept=True,
         n_jobs=None
     ),
     "KNN": KNeighborsRegressor(
         n_neighbors=10
-    ),
-    "Random_Forest": RandomForestRegressor(
-        n_estimators=1200,
-        random_state=SEED,
-        n_jobs=-1
-    ),
-    "XGBoost": XGBRegressor(
-        n_estimators=100,
-        learning_rate=0.1,
-        max_depth=3,
-        objective='reg:squarederror',
-        random_state=SEED
-    ),
-    "CatBoost": CatBoostRegressor(
-        iterations=1000,
-        learning_rate=0.03,
-        depth=6,
-        loss_function='RMSE',
-        logging_level='Silent',
-        random_state=SEED
     )
 }
+
+ADVANCED_MODEL_NAMES = ["Random_Forest", "XGBoost", "CatBoost"]
 
 # 4. Configuracoes do ML Flow:
 
@@ -147,3 +127,4 @@ def create_directories():
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    (BASE_DIR / "docs" / "optuna_studies").mkdir(parents=True, exist_ok=True)

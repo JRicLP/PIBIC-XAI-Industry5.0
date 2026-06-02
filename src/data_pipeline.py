@@ -16,9 +16,9 @@ validação e desenvolvimento independente.
 """
 
 # Imports
-import urllib.request
 import zipfile
 import pandas as pd
+import requests
 from src import config
 from sklearn.preprocessing import MinMaxScaler
 
@@ -39,7 +39,21 @@ def download_and_extract_data():
         return
 
     print("Baixando dataset da NASA (CMAPSS)...")
-    urllib.request.urlretrieve(config.DATASET_URL, zip_path)
+    try:
+        response = requests.get(config.DATASET_URL, timeout=120, stream=True)
+        response.raise_for_status()
+
+        with open(zip_path, "wb") as zip_file:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    zip_file.write(chunk)
+
+        if zip_path.stat().st_size < 1_000_000:
+            zip_path.unlink(missing_ok=True)
+            raise RuntimeError("Arquivo baixado parece corrompido (tamanho abaixo do esperado).")
+    except requests.RequestException as exc:
+        raise RuntimeError(f"Falha no download do dataset: {exc}") from exc
+
     print("Extraindo arquivos...")
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(config.RAW_DATA_DIR)

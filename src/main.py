@@ -16,6 +16,7 @@ O fluxo é organizado da seguinte forma:
 # Imports
 import random
 import numpy as np
+import pandas as pd
 
 from src import config
 from src.config import SEED, create_directories
@@ -23,7 +24,7 @@ from src.data_pipeline import run_etl_pipeline
 from src.evaluation import evaluate_model
 from src.explainability import generate_explanations
 from src.llm_assistant import generate_operator_report
-from src.train import run_training_pipeline
+from src.train import build_model_from_params, run_optuna_tuning, run_training_pipeline
 
 def main():
     """
@@ -41,6 +42,21 @@ def main():
     print("\n[Fase 1] Engenharia e Processamento de Dados")
     run_etl_pipeline()
 
+    df_processed = pd.read_csv(config.PROCESSED_DATA_DIR / config.PROCESSED_FILE_NAME)
+
+    # 2. Tuning com Optuna:
+    print("\n[Fase 2] Tuning Bayesiano com Optuna")
+    best_params_by_model = run_optuna_tuning(df_processed)
+
+    tuned_models = {
+        model_name: build_model_from_params(model_name, best_params_by_model[model_name])
+        for model_name in config.ADVANCED_MODEL_NAMES
+    }
+    models_to_train = {
+        **config.BASELINE_MODELS,
+        **tuned_models,
+    }
+
     # Variáveis para rastrear o campeão do torneio
     best_r2 = -float('inf')
     campeao_nome = ""
@@ -51,11 +67,11 @@ def main():
     campeao_y_pred = None
     campeao_test_metadata = None
 
-    print("\n[Fase 2 e 3] Iniciando o Torneio de Modelos Preditivos (RUL)")
+    print("\n[Fase 3] Torneio Final de Modelos Preditivos (RUL)")
     
     try:
         # Itera sobre o dicionário de modelos na configuração
-        for nome_modelo, instancia_modelo in config.MODELS_TO_TRAIN.items():
+        for nome_modelo, instancia_modelo in models_to_train.items():
             print(f"\n-> Avaliando: {nome_modelo}")
             
             # Treinamento
