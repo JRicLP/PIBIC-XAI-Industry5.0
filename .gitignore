@@ -1,25 +1,30 @@
-# 1. Ambientes Virtuais e Cache
+# 1. Ambientes virtuais e cache
 .venv/
 __pycache__/
+*.py[cod]
 *.ipynb_checkpoints
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# 2. Dados e Logs Locais de Treinamento
+# 2. Dados e logs locais de treinamento
 data/
 mlruns/
 catboost_info/
 
-# 3. Artefatos Gerados Dinamicamente
+# 3. Artefatos gerados dinamicamente
 docs/plots/
 docs/reports/
+docs/optuna_studies/
+docs/ai4i/*.html
+docs/hydraulic/*.html
 docs/nasa/*.html
 
-# 4. Variáveis de Ambiente e Segurança
+# 4. Variaveis de ambiente e seguranca
 .env
 
-# 5. Arquivos de Sistema Operacional
+# 5. Arquivos de sistema operacional
 .DS_Store
 Thumbs.db
-
-# Temporário:
-RESULTADOS_NASA.md
-

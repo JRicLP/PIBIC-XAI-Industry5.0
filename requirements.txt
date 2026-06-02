@@ -11,5 +11,7 @@ matplotlib
 google-genai
 python-dotenv
 requests
+optuna
+joblib
 jupyter
 nbstripout

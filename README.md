@@ -48,7 +48,7 @@ The `.env` file is ignored by Git. The public template is `.env.example`.
 python -m src.main
 ```
 
-The modular pipeline runs ETL, model training, official NASA test-set evaluation, Shapash explainability and the Gemini-based operator report.
+The modular pipeline runs ETL, Optuna tuning for advanced models, final NASA test-set evaluation, Shapash explainability and the Gemini-based operator report.
 
 ### Notebooks
 
@@ -99,6 +99,12 @@ docs/nasa/Verificacao_RUL_Real_vs_Predito.png
 ```
 
 Shapash HTML reports are regenerable artifacts and are ignored by Git.
+
+Optuna studies are saved under:
+
+```text
+docs/optuna_studies/
+```
 
 Narrative NASA analysis:
 

@@ -16,17 +16,163 @@ O fluxo de treinamento é o seguinte:
 # Imports
 import mlflow
 import mlflow.sklearn
+import joblib
 import numpy as np
+import optuna
 import pandas as pd
+from catboost import CatBoostRegressor
 from sklearn.base import clone
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import make_scorer, mean_absolute_error, r2_score
-from sklearn.model_selection import GroupKFold, cross_validate
+from sklearn.model_selection import GroupKFold, cross_val_score, cross_validate
+from xgboost import XGBRegressor
 from src import config
 
 
 def _rmse_score(y_true, y_pred):
     """Retorna RMSE para uso na validacao cruzada."""
     return np.sqrt(np.mean((np.asarray(y_true) - np.asarray(y_pred)) ** 2))
+
+
+def _make_cv_data(df, n_splits=5):
+    """Prepara X, y, groups e GroupKFold compartilhados por CV e Optuna."""
+    required_columns = {"engine_id", "time_cycle", "RUL"}
+    missing_columns = required_columns.difference(df.columns)
+    if missing_columns:
+        raise ValueError(f"Colunas obrigatorias ausentes para validacao cruzada: {sorted(missing_columns)}")
+
+    x = df.drop(columns=["engine_id", "time_cycle", "RUL"])
+    y = df["RUL"]
+    groups = df["engine_id"]
+    return x, y, groups, GroupKFold(n_splits=n_splits)
+
+
+def _mae_cv_score(model, df, n_splits=5):
+    """Retorna o MAE medio de GroupKFold para uma instancia de modelo."""
+    x, y, groups, gkf = _make_cv_data(df, n_splits=n_splits)
+    scorer = make_scorer(mean_absolute_error, greater_is_better=False)
+    scores = cross_val_score(model, x, y, cv=gkf, groups=groups, scoring=scorer)
+    return float(-scores.mean())
+
+
+def objective_rf(trial, df):
+    params = {
+        "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+        "max_depth": trial.suggest_int("max_depth", 5, 25),
+        "min_samples_split": trial.suggest_int("min_samples_split", 2, 20),
+        "max_features": trial.suggest_categorical("max_features", ["sqrt", "log2"]),
+        "random_state": config.SEED,
+        "n_jobs": -1,
+    }
+    return _mae_cv_score(RandomForestRegressor(**params), df)
+
+
+def objective_xgb(trial, df):
+    params = {
+        "n_estimators": trial.suggest_int("n_estimators", 100, 500),
+        "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.3, log=True),
+        "max_depth": trial.suggest_int("max_depth", 3, 8),
+        "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+        "objective": "reg:squarederror",
+        "random_state": config.SEED,
+        "n_jobs": -1,
+    }
+    return _mae_cv_score(XGBRegressor(**params), df)
+
+
+def objective_catboost(trial, df):
+    params = {
+        "iterations": trial.suggest_int("iterations", 200, 800),
+        "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.3, log=True),
+        "depth": trial.suggest_int("depth", 4, 8),
+        "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1.0, 10.0),
+        "loss_function": "RMSE",
+        "logging_level": "Silent",
+        "random_state": config.SEED,
+    }
+    return _mae_cv_score(CatBoostRegressor(**params), df)
+
+
+OBJECTIVES = {
+    "Random_Forest": objective_rf,
+    "XGBoost": objective_xgb,
+    "CatBoost": objective_catboost,
+}
+
+
+def run_optuna_tuning(df_processed):
+    """
+    Executa Optuna nos modelos avancados e salva cada study em docs/optuna_studies.
+    O teste oficial NASA nao e usado nesta etapa.
+    """
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+    studies_dir = config.BASE_DIR / "docs" / "optuna_studies"
+    studies_dir.mkdir(parents=True, exist_ok=True)
+
+    best_params_by_model = {}
+
+    for model_name in config.ADVANCED_MODEL_NAMES:
+        study_path = studies_dir / f"study_{model_name}.pkl"
+
+        if study_path.exists():
+            print(f"\n[Optuna] Retomando study salvo para {model_name}...")
+            study = joblib.load(study_path)
+        else:
+            study = optuna.create_study(
+                direction="minimize",
+                study_name=model_name,
+                sampler=optuna.samplers.TPESampler(seed=config.SEED),
+            )
+
+        remaining_trials = config.N_OPTUNA_TRIALS - len(study.trials)
+        if remaining_trials <= 0:
+            print(f"\n[Optuna] {model_name} ja possui {len(study.trials)} trials. Pulando.")
+        else:
+            print(f"\n[Optuna] Tunando {model_name} - {remaining_trials} trials restantes...")
+            study.optimize(
+                lambda trial: OBJECTIVES[model_name](trial, df_processed),
+                n_trials=remaining_trials,
+                show_progress_bar=True,
+                callbacks=[lambda study, trial: joblib.dump(study, study_path)],
+            )
+            joblib.dump(study, study_path)
+
+        best_params_by_model[model_name] = study.best_params
+        print(f"  Melhor MAE (CV): {study.best_value:.2f} ciclos")
+        print(f"  Melhores params: {study.best_params}")
+
+    return best_params_by_model
+
+
+def build_model_from_params(model_name, params):
+    """
+    Instancia o modelo avancado com os hiperparametros retornados pelo Optuna.
+    """
+    constructors = {
+        "Random_Forest": lambda p: RandomForestRegressor(
+            **p,
+            random_state=config.SEED,
+            n_jobs=-1,
+        ),
+        "XGBoost": lambda p: XGBRegressor(
+            **p,
+            objective="reg:squarederror",
+            random_state=config.SEED,
+            n_jobs=-1,
+        ),
+        "CatBoost": lambda p: CatBoostRegressor(
+            **p,
+            loss_function="RMSE",
+            logging_level="Silent",
+            random_state=config.SEED,
+        ),
+    }
+
+    if model_name not in constructors:
+        raise ValueError(f"Modelo avancado nao suportado para Optuna: {model_name}")
+
+    return constructors[model_name](dict(params))
 
 
 def run_cross_validation(model_name, model_instance, df=None, n_splits=5):
@@ -40,14 +186,7 @@ def run_cross_validation(model_name, model_instance, df=None, n_splits=5):
             raise FileNotFoundError(f"Arquivo nao encontrado: {data_path}. Execute o pipeline de dados primeiro.")
         df = pd.read_csv(data_path)
 
-    required_columns = {"engine_id", "time_cycle", "RUL"}
-    missing_columns = required_columns.difference(df.columns)
-    if missing_columns:
-        raise ValueError(f"Colunas obrigatorias ausentes para validacao cruzada: {sorted(missing_columns)}")
-
-    x = df.drop(columns=["engine_id", "time_cycle", "RUL"])
-    y = df["RUL"]
-    groups = df["engine_id"]
+    x, y, groups, gkf = _make_cv_data(df, n_splits=n_splits)
 
     scoring = {
         "mae": make_scorer(mean_absolute_error, greater_is_better=False),
@@ -60,7 +199,7 @@ def run_cross_validation(model_name, model_instance, df=None, n_splits=5):
         clone(model_instance),
         x,
         y,
-        cv=GroupKFold(n_splits=n_splits),
+        cv=gkf,
         groups=groups,
         scoring=scoring,
         return_train_score=False,
@@ -137,6 +276,13 @@ def run_training_pipeline(model_name, model_instance):
     with mlflow.start_run(run_name=model_name) as run:
         print(f"Iniciando treinamento do modelo: {model_name}...")
 
+        if hasattr(model_instance, "get_params"):
+            mlflow.log_params({
+                key: value
+                for key, value in model_instance.get_params(deep=False).items()
+                if value is not None
+            })
+
         # Treinamento dinâmico
         model_instance.fit(x_train, y_train)
 
@@ -151,7 +297,7 @@ if __name__ == "__main__":
     # Teste isolado para garantir que o pipeline de treinamento funcione corretamente
 
     # Escolhe o primeiro modelo da arena de modelos para teste
-    nome_padrao, instancia_padrao = list(config.MODELS_TO_TRAIN.items())[0]
+    nome_padrao, instancia_padrao = list(config.BASELINE_MODELS.items())[0]
 
     try:
         run_training_pipeline(nome_padrao, instancia_padrao)
