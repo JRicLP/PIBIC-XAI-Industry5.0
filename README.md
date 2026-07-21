@@ -259,7 +259,7 @@ jupyter notebook notebooks/08_etl_nasa_cmaps.ipynb
 
 O diagrama abaixo detalha as decisões e transformações de cada fase:
 
-![Diagrama de funcionamento](docs/Arquitetura-PIBIC.drawio.png)
+![Diagrama de funcionamento](docs/Arquitetura-PIBIC%20(1).drawio.png)
 
 ---
 
